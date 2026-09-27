@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>酉润关务计算器</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3F51B5',
+                        secondary: '#4CAF50',
+                        accent: '#FFC107',
+                        dark: {
+                            100: '#1E1E1E',
+                            200: '#121212',
+                            300: '#0A0A0A',
+                            400: '#000000'
+                        },
+                        light: {
+                            100: '#FFFFFF',
+                            200: '#F5F5F5',
+                            300: '#E0E0E0',
+                            400: '#9E9E9E'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card': '0 2px 15px rgba(0, 0, 0, 0.3)',
+                        'button': '0 2px 8px rgba(0, 0, 0, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            }
+            .input-field {
+                @apply bg-dark-100 border border-dark-300 text-light-100 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300;
+            }
+            .btn-primary {
+                @apply bg-primary text-white py-3 px-6 rounded-lg shadow-button hover:bg-opacity-90 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2;
+            }
+            .btn-secondary {
+                @apply bg-dark-100 text-light-100 py-3 px-6 rounded-lg shadow-button hover:bg-dark-300 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2;
+            }
+            .btn-accent {
+                @apply bg-accent text-dark-400 py-3 px-6 rounded-lg shadow-button hover:bg-opacity-90 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2;
+            }
+            .card {
+                @apply bg-dark-200 rounded-xl shadow-card p-6 transition-all duration-300 hover:shadow-lg;
+            }
+            .result-item {
+                @apply flex justify-between items-center py-2 border-b border-dark-100 last:border-0;
+            }
+            .result-label {
+                @apply text-light-300 font-medium;
+            }
+            .result-value {
+                @apply text-light-100 font-bold;
+            }
+            .input-group {
+                @apply mb-3;
+            }
+            .input-label {
+                @apply block text-light-300 mb-1 text-sm font-medium;
+            }
+            .section-title {
+                @apply text-light-100 text-xl font-light mb-4 flex items-center gap-2;
+            }
+            .animate-fade-in {
+                animation: fadeIn 0.8s forwards;
+            }
+            .animate-typing {
+                overflow: hidden;
+                border-right: 2px solid rgba(255, 255, 255, 0.75);
+                white-space: nowrap;
+                margin: 0 auto;
+                letter-spacing: 0.15em;
+                animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+            }
+            .mouse-follow-element {
+                position: absolute;
+                pointer-events: none;
+                z-index: 100;
+                opacity: 0;
+                transition: all 0.3s ease-out;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: rgba(255, 255, 255, 0.75); }
+        }
+    </style>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3F51B5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="关务计算器">
+</head>
+<body class="bg-dark-400 text-light-100 min-h-screen font-sans">
+    <!-- 顶部导航栏 -->
+    <header class="bg-dark-300 text-light-100 shadow-lg">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa fa-calculator text-2xl text-primary"></i>
+                <h1 class="text-2xl font-light">
+                    <span id="typing-text"></span>
+                </h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="saveBtn" class="btn-accent">
+                    <i class="fa fa-save"></i>
+                    <span>保存</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- 输入卡片 -->
+        <div class="card mb-4">
+            <h2 class="section-title">
+                <i class="fa fa-pencil-square-o text-primary"></i>
+                基本信息输入
+            </h2>
+            <form id="calculatorForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- 车牌号 -->
+                <div class="input-group">
+                    <label for="licensePlate" class="input-label">车牌号</label>
+                    <input type="text" id="licensePlate" class="input-field w-full" placeholder="请输入车牌号">
+                </div>
+                
+                <!-- 车辆备案重量 -->
+                <div class="input-group">
+                    <label for="vehicleWeight" class="input-label">车辆备案重量 (kg)</label>
+                    <input type="number" id="vehicleWeight" class="input-field w-full" placeholder="请输入车辆备案重量" step="0.01" required>
+                </div>
+                
+                <!-- 件数 -->
+                <div class="input-group">
+                    <label for="packageCount" class="input-label">件数</label>
+                    <input type="number" id="packageCount" class="input-field w-full" placeholder="请输入件数" step="1" min="1" required>
+                </div>
+                
+                <!-- 包装重量 -->
+                <div class="input-group">
+                    <label for="packageWeight" class="input-label">包装重量 (kg)</label>
+                    <input type="number" id="packageWeight" class="input-field w-full" placeholder="请输入包装重量" step="0.01" required>
+                </div>
+                
+                <!-- 集装箱号 -->
+                <div class="input-group">
+                    <label for="containerNumber" class="input-label">集装箱号</label>
+                    <input type="text" id="containerNumber" class="input-field w-full" placeholder="请输入集装箱号">
+                </div>
+                
+                <!-- 集装箱备案重量 -->
+                <div class="input-group">
+                    <label for="containerWeight" class="input-label">集装箱备案重量 (kg)</label>
+                    <input type="number" id="containerWeight" class="input-field w-full" placeholder="请输入集装箱备案重量" step="0.01" required>
+                </div>
+                
+                <!-- 入区重车重量 -->
+                <div class="input-group">
+                    <label for="entryWeight" class="input-label">入区重车重量 (kg)</label>
+                    <div class="relative">
+                        <input type="number" id="entryWeight" class="input-field w-full pr-40" placeholder="请输入入区重车重量" step="0.01" required>
+                        <div id="entryCargoWeightDisplay" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-light-400 whitespace-nowrap">
+                            入区货重: <span id="entryCargoWeightValue">-</span> kg
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 出区空车重量 -->
+                <div class="input-group">
+                    <label for="exitWeight" class="input-label">出区空车重量 (kg)</label>
+                    <input type="number" id="exitWeight" class="input-field w-full" placeholder="请输入出区空车重量" step="0.01" required>
+                </div>
+            </form>
+            
+            <!-- 操作按钮 -->
+            <div class="flex flex-wrap gap-3 mt-4">
+                <button id="calculateBtn" class="btn-primary flex-1">
+                    <i class="fa fa-calculator"></i>
+                    <span>计算</span>
+                </button>
+                <button id="resetBtn" class="btn-secondary flex-1">
+                    <i class="fa fa-refresh"></i>
+                    <span>重置</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 结果卡片 -->
+        <div id="resultCard" class="card mb-4 hidden">
+            <h2 class="section-title">
+                <i class="fa fa-bar-chart text-primary"></i>
+                计算结果
+            </h2>
+            <div id="resultsContainer" class="space-y-2">
+                <!-- 结果将通过JavaScript动态生成 -->
+            </div>
+        </div>
+        
+        <!-- 历史记录卡片 -->
+        <div id="historyCard" class="card">
+            <h2 class="section-title justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa fa-history text-primary"></i>
+                    <span>历史记录</span>
+                </div>
+                <button id="clearHistoryBtn" class="text-sm text-light-400 hover:text-error transition-colors">
+                    <i class="fa fa-trash-o"></i>
+                    <span>清空</span>
+                </button>
+            </h2>
+            
+            <!-- 搜索框 -->
+            <div class="mb-4">
+                <input type="text" id="historySearch" class="input-field w-full" placeholder="搜索车牌号、集装箱号...">
+            </div>
+            
+            <div id="historyContainer" class="space-y-3">
+                <!-- 历史记录将通过JavaScript动态生成 -->
+                <div class="text-center text-light-400 py-4" id="noHistoryMessage">
+                    暂无历史记录
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部信息 -->
+    <footer class="bg-dark-300 text-light-300 py-4 mt-8">
+        <div class="container mx-auto px-4 text-center text-sm">
+            <p>© 2025 酉润关务计算器 | 徐健翔编写</p>
+        </div>
+    </footer>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="fixed bottom-4 right-4 bg-dark-200 text-light-100 rounded-lg shadow-lg p-4 max-w-xs transform translate-y-full opacity-0 transition-all duration-300 z-50">
+        <div class="flex items-start gap-3">
+            <div id="notificationIcon" class="text-primary text-xl pt-1">
+                <i class="fa fa-info-circle"></i>
+            </div>
+            <div class="flex-1">
+                <h3 id="notificationTitle" class="font-bold text-light-100">通知标题</h3>
+                <p id="notificationMessage" class="text-light-300 text-sm mt-1">通知内容</p>
+            </div>
+            <button id="closeNotification" class="text-light-400 hover:text-light-100">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- 鼠标跟随效果容器 -->
+    <div id="mouse-follow-container" class="fixed inset-0 pointer-events-none z-0"></div>
+
+    <script>
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const form = document.getElementById('calculatorForm');
+            const calculateBtn = document.getElementById('calculateBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const resultCard = document.getElementById('resultCard');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const historyContainer = document.getElementById('historyContainer');
+            const noHistoryMessage = document.getElementById('noHistoryMessage');
+            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+            const notification = document.getElementById('notification');
+            const notificationTitle = document.getElementById('notificationTitle');
+            const notificationMessage = document.getElementById('notificationMessage');
+            const notificationIcon = document.getElementById('notificationIcon');
+            const closeNotification = document.getElementById('closeNotification');
+
+            // 输入字段
+            const inputs = {
+                licensePlate: document.getElementById('licensePlate'),
+                vehicleWeight: document.getElementById('vehicleWeight'),
+                packageCount: document.getElementById('packageCount'),
+                packageWeight: document.getElementById('packageWeight'),
+                containerNumber: document.getElementById('containerNumber'),
+                containerWeight: document.getElementById('containerWeight'),
+                entryWeight: document.getElementById('entryWeight'),
+                exitWeight: document.getElementById('exitWeight')
+            };
+            
+            // 获取入区货重显示元素
+            const entryCargoWeightValue = document.getElementById('entryCargoWeightValue');
+            
+            // 检查是否满足计算条件
+            function checkCalculateConditions() {
+                // 必填字段：车辆备案重量、件数、包装重量、集装箱备案重量、入区重车重量、出区空车重量
+                const requiredFields = [
+                    inputs.vehicleWeight,
+                    inputs.packageCount,
+                    inputs.packageWeight,
+                    inputs.containerWeight,
+                    inputs.entryWeight,
+                    inputs.exitWeight
+                ];
+                
+                // 检查所有必填字段是否都有值
+                const allFieldsFilled = requiredFields.every(input => {
+                    return input.value && input.value.trim() !== '';
+                });
+                
+                // 检查数值是否有效
+                if (allFieldsFilled) {
+                    const vehicleWeight = parseFloat(inputs.vehicleWeight.value);
+                    const packageCount = parseInt(inputs.packageCount.value);
+                    const packageWeight = parseFloat(inputs.packageWeight.value);
+                    const containerWeight = parseFloat(inputs.containerWeight.value);
+                    const entryWeight = parseFloat(inputs.entryWeight.value);
+                    const exitWeight = parseFloat(inputs.exitWeight.value);
+                    
+                    // 检查数值是否大于0
+                    if (vehicleWeight > 0 && 
+                        packageCount > 0 && 
+                        packageWeight >= 0 && 
+                        containerWeight > 0 && 
+                        entryWeight > 0 && 
+                        exitWeight > 0) {
+                        
+                        // 检查入区重车重量是否大于出区空车重量
+                        if (entryWeight > exitWeight) {
+                            return true;
+                        }
+                    }
+                }
+                
+                return false;
+            }
+            
+            // 实时计算函数
+            function realTimeCalculate() {
+                // 计算并显示入区货重
+                calculateEntryCargoWeight();
+            }
+            
+            // 计算并显示入区货重
+            function calculateEntryCargoWeight() {
+                // 获取必要的输入值
+                const vehicleWeight = parseFloat(inputs.vehicleWeight.value);
+                const containerWeight = parseFloat(inputs.containerWeight.value);
+                const entryWeight = parseFloat(inputs.entryWeight.value);
+                
+                // 检查是否有足够的数据进行计算
+                if (!isNaN(vehicleWeight) && !isNaN(containerWeight) && !isNaN(entryWeight) && 
+                    vehicleWeight > 0 && containerWeight > 0 && entryWeight > 0) {
+                    
+                    // 计算入区货重
+                    const entryCargoWeight = entryWeight - vehicleWeight - containerWeight;
+                    
+                    // 结果为负数时显示错误提示
+                    if (entryCargoWeight >= 0) {
+                        entryCargoWeightValue.textContent = formatNumber(entryCargoWeight);
+                        entryCargoWeightValue.classList.remove('text-error');
+                    } else {
+                        entryCargoWeightValue.textContent = '无效';
+                        entryCargoWeightValue.classList.add('text-error');
+                    }
+                } else {
+                    // 数据不足时显示占位符
+                    entryCargoWeightValue.textContent = '-';
+                    entryCargoWeightValue.classList.remove('text-error');
+                }
+            }
+
+            // 结果数据
+            let results = {};
+            
+            // 历史记录
+            let history = [];
+            
+            // 显示通知
+            function showNotification(title, message, type = 'info') {
+                notificationTitle.textContent = title;
+                notificationMessage.textContent = message;
+                
+                // 设置图标和颜色
+                let iconClass = 'fa-info-circle';
+                let iconColor = 'text-primary';
+                
+                if (type === 'success') {
+                    iconClass = 'fa-check-circle';
+                    iconColor = 'text-secondary';
+                } else if (type === 'error') {
+                    iconClass = 'fa-exclamation-circle';
+                    iconColor = 'text-error';
+                } else if (type === 'warning') {
+                    iconClass = 'fa-exclamation-triangle';
+                    iconColor = 'text-accent';
+                }
+                
+                notificationIcon.className = '';
+                notificationIcon.classList.add(iconColor, 'text-xl', 'pt-1');
+                notificationIcon.innerHTML = `<i class="fa ${iconClass}"></i>`;
+                
+                // 显示通知
+                notification.classList.remove('translate-y-full', 'opacity-0');
+                notification.classList.add('translate-y-0', 'opacity-100');
+                
+                // 3秒后自动隐藏
+                setTimeout(() => {
+                    hideNotification();
+                }, 3000);
+            }
+            
+            // 隐藏通知
+            function hideNotification() {
+                notification.classList.remove('translate-y-0', 'opacity-100');
+                notification.classList.add('translate-y-full', 'opacity-0');
+            }
+            
+            // 格式化数字为两位小数
+            function formatNumber(num) {
+                return num.toFixed(2);
+            }
+            
+            // 显示确认对话框
+            function showConfirmDialog(title, message, confirmCallback) {
+                // 创建对话框容器
+                const dialogContainer = document.createElement('div');
+                dialogContainer.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+                
+                // 创建对话框
+                const dialog = document.createElement('div');
+                dialog.className = 'bg-red-600 rounded-xl shadow-lg w-[320px] mx-auto';
+                
+                // 对话框内容
+                dialog.innerHTML = `
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold text-black mb-4">${title}</h3>
+                        <p class="text-black mb-6">${message}</p>
+                        <div class="flex justify-end gap-3">
+                            <button id="confirmCancel" class="bg-white text-black py-3 px-6 rounded-lg shadow-button hover:bg-gray-200 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2">
+                                <i class="fa fa-times"></i>
+                                <span>取消</span>
+                            </button>
+                            <button id="confirmOk" class="bg-black text-white py-3 px-6 rounded-lg shadow-button hover:bg-gray-800 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2">
+                                <i class="fa fa-check"></i>
+                                <span>确认</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                dialogContainer.appendChild(dialog);
+                document.body.appendChild(dialogContainer);
+                
+                // 添加震动效果
+                if (navigator.vibrate) {
+                    navigator.vibrate(200); // 震动200毫秒
+                }
+                
+                // 添加事件监听器
+                document.getElementById('confirmCancel').addEventListener('click', function() {
+                    document.body.removeChild(dialogContainer);
+                });
+                
+                document.getElementById('confirmOk').addEventListener('click', function() {
+                    document.body.removeChild(dialogContainer);
+                    if (typeof confirmCallback === 'function') {
+                        confirmCallback();
+                    }
+                });
+            }
+            
+            // 计算函数
+            function calculate() {
+                // 验证表单
+                if (!validateForm()) {
+                    return;
+                }
+                
+                // 获取输入值
+                const vehicleWeight = parseFloat(inputs.vehicleWeight.value);
+                const packageCount = parseInt(inputs.packageCount.value);
+                const packageWeight = parseFloat(inputs.packageWeight.value);
+                const containerWeight = parseFloat(inputs.containerWeight.value);
+                const entryWeight = parseFloat(inputs.entryWeight.value);
+                const exitWeight = parseFloat(inputs.exitWeight.value);
+                
+                // 计算结果
+                const entryCargoWeight = entryWeight - vehicleWeight - containerWeight; // 入区货重
+                const actualGrossWeight = entryWeight - exitWeight - containerWeight; // 实际毛重
+                const unitGrossWeight = actualGrossWeight / packageCount; // 单件毛重
+                const unitNetWeight = unitGrossWeight - packageWeight; // 单件净重
+                const totalNetWeight = unitNetWeight * packageCount; // 总净重
+                const totalGrossWeight = unitGrossWeight * packageCount; // 总毛重
+                
+                // 保存结果
+                results = {
+                    packageCount: packageCount,
+                    entryCargoWeight: formatNumber(entryCargoWeight),
+                    actualGrossWeight: formatNumber(actualGrossWeight),
+                    unitGrossWeight: formatNumber(unitGrossWeight),
+                    unitNetWeight: formatNumber(unitNetWeight),
+                    totalNetWeight: formatNumber(totalNetWeight),
+                    totalGrossWeight: formatNumber(totalGrossWeight)
+                };
+                
+                // 显示结果
+                displayResults();
+                
+                // 添加到历史记录
+                addToHistory();
+                
+                // 保存到本地存储
+                saveToLocalStorage();
+                
+                // 显示成功通知
+                showNotification('计算成功', '已完成所有数据计算', 'success');
+            }
+            
+            // 验证表单
+            function validateForm() {
+                let isValid = true;
+                
+                // 检查必填字段
+                Object.keys(inputs).forEach(key => {
+                    const input = inputs[key];
+                    
+                    // 车牌号和集装箱号可以为空
+                    if ((key === 'licensePlate' || key === 'containerNumber')) {
+                        return;
+                    }
+                    
+                    if (!input.value) {
+                        input.classList.add('border-error');
+                        isValid = false;
+                    } else {
+                        input.classList.remove('border-error');
+                    }
+                });
+                
+                // 检查数值是否有效
+                if (isValid) {
+                    if (parseFloat(inputs.vehicleWeight.value) <= 0) {
+                        inputs.vehicleWeight.classList.add('border-error');
+                        isValid = false;
+                    }
+                    
+                    if (parseInt(inputs.packageCount.value) <= 0) {
+                        inputs.packageCount.classList.add('border-error');
+                        isValid = false;
+                    }
+                    
+                    if (parseFloat(inputs.containerWeight.value) <= 0) {
+                        inputs.containerWeight.classList.add('border-error');
+                        isValid = false;
+                    }
+                    
+                    if (parseFloat(inputs.entryWeight.value) <= 0) {
+                        inputs.entryWeight.classList.add('border-error');
+                        isValid = false;
+                    }
+                    
+                    if (parseFloat(inputs.exitWeight.value) <= 0) {
+                        inputs.exitWeight.classList.add('border-error');
+                        isValid = false;
+                    }
+                }
+                
+                if (!isValid) {
+                    showNotification('输入错误', '请检查并填写所有必填字段', 'error');
+                }
+                
+                return isValid;
+            }
+            
+            // 显示结果
+            function displayResults() {
+                // 显示结果卡片
+                resultCard.classList.remove('hidden');
+                
+                // 清空结果容器
+                resultsContainer.innerHTML = '';
+                
+                // 结果标签和值的映射
+                const resultLabels = {
+                    packageCount: '件数',
+                    entryCargoWeight: '入区货重 (kg)',
+                    actualGrossWeight: '实际毛重 (kg)',
+                    unitGrossWeight: '单件毛重 (kg)',
+                    unitNetWeight: '单件净重 (kg)',
+                    totalNetWeight: '总净重 (kg)',
+                    totalGrossWeight: '总毛重 (kg)'
+                };
+                
+                // 添加结果项
+                Object.keys(results).forEach(key => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'result-item';
+                    
+                    const labelElement = document.createElement('span');
+                    labelElement.className = 'result-label';
+                    labelElement.textContent = resultLabels[key];
+                    
+                    const valueElement = document.createElement('span');
+                    valueElement.className = 'result-value';
+                    valueElement.textContent = results[key];
+                    
+                    resultItem.appendChild(labelElement);
+                    resultItem.appendChild(valueElement);
+                    resultsContainer.appendChild(resultItem);
+                });
+            }
+            
+            // 重置表单
+            function resetForm() {
+                form.reset();
+                
+                // 移除错误样式
+                Object.values(inputs).forEach(input => {
+                    input.classList.remove('border-error');
+                });
+                
+                // 隐藏结果卡片
+                resultCard.classList.add('hidden');
+                
+                // 显示通知
+                showNotification('已重置', '所有输入已清空', 'info');
+            }
+            
+            // 保存到本地存储
+            function saveToLocalStorage() {
+                try {
+                    // 保存当前输入
+                    const currentInput = {
+                        licensePlate: inputs.licensePlate.value,
+                        vehicleWeight: inputs.vehicleWeight.value,
+                        packageCount: inputs.packageCount.value,
+                        packageWeight: inputs.packageWeight.value,
+                        containerNumber: inputs.containerNumber.value,
+                        containerWeight: inputs.containerWeight.value,
+                        entryWeight: inputs.entryWeight.value,
+                        exitWeight: inputs.exitWeight.value,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    // 保存结果
+                    localStorage.setItem('calculatorInput', JSON.stringify(currentInput));
+                    localStorage.setItem('calculatorResults', JSON.stringify(results));
+                    
+                    // 更新历史记录
+                    updateHistoryInLocalStorage();
+                    
+                    return true;
+                } catch (error) {
+                    console.error('保存到本地存储失败:', error);
+                    showNotification('保存失败', '无法保存数据到本地存储', 'error');
+                    return false;
+                }
+            }
+            
+            // 从本地存储加载
+            function loadFromLocalStorage() {
+                try {
+                    const savedInput = localStorage.getItem('calculatorInput');
+                    const savedResults = localStorage.getItem('calculatorResults');
+                    
+                    if (savedInput) {
+                        const inputData = JSON.parse(savedInput);
+                        
+                        // 填充输入字段
+                        inputs.licensePlate.value = inputData.licensePlate || '';
+                        inputs.vehicleWeight.value = inputData.vehicleWeight || '';
+                        inputs.packageCount.value = inputData.packageCount || '';
+                        inputs.packageWeight.value = inputData.packageWeight || '';
+                        inputs.containerNumber.value = inputData.containerNumber || '';
+                        inputs.containerWeight.value = inputData.containerWeight || '';
+                        inputs.entryWeight.value = inputData.entryWeight || '';
+                        inputs.exitWeight.value = inputData.exitWeight || '';
+                    }
+                    
+                    if (savedResults) {
+                        results = JSON.parse(savedResults);
+                        displayResults();
+                    }
+                    
+                    // 加载历史记录
+                    loadHistoryFromLocalStorage();
+                    
+                    return true;
+                } catch (error) {
+                    console.error('从本地存储加载失败:', error);
+                    showNotification('加载失败', '无法从本地存储加载数据', 'error');
+                    return false;
+                }
+            }
+            
+            // 添加到历史记录
+            function addToHistory() {
+                const historyItem = {
+                    input: {
+                        licensePlate: inputs.licensePlate.value,
+                        vehicleWeight: inputs.vehicleWeight.value,
+                        packageCount: inputs.packageCount.value,
+                        packageWeight: inputs.packageWeight.value,
+                        containerNumber: inputs.containerNumber.value,
+                        containerWeight: inputs.containerWeight.value,
+                        entryWeight: inputs.entryWeight.value,
+                        exitWeight: inputs.exitWeight.value
+                    },
+                    results: results,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // 添加到历史记录数组
+                history.unshift(historyItem);
+                
+                // 更新搜索框引用
+                const historySearch = document.getElementById('historySearch');
+                
+                // 限制历史记录数量
+                if (history.length > 10) {
+                    history.pop();
+                }
+                
+                // 更新历史记录显示
+                updateHistoryDisplay();
+            }
+            
+            // 更新历史记录显示
+            function updateHistoryDisplay(searchKeyword = '') {
+                // 清空历史记录容器
+                historyContainer.innerHTML = '';
+                
+                // 过滤历史记录
+                let filteredHistory = history;
+                if (searchKeyword) {
+                    const keyword = searchKeyword.toLowerCase();
+                    filteredHistory = history.filter(item => {
+                        // 搜索车牌号
+                        if (item.input.licensePlate && item.input.licensePlate.toLowerCase().includes(keyword)) {
+                            return true;
+                        }
+                        // 搜索集装箱号
+                        if (item.input.containerNumber && item.input.containerNumber.toLowerCase().includes(keyword)) {
+                            return true;
+                        }
+                        // 搜索件数
+                        if (item.input.packageCount && item.input.packageCount.toString().includes(keyword)) {
+                            return true;
+                        }
+                        // 搜索日期
+                        const date = new Date(item.timestamp);
+                        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                        if (dateStr.includes(keyword)) {
+                            return true;
+                        }
+                        return false;
+                    });
+                }
+                
+                // 显示或隐藏"暂无历史记录"消息
+                if (filteredHistory.length === 0) {
+                    const noResultsMessage = document.createElement('div');
+                    noResultsMessage.className = 'text-center text-light-400 py-4';
+                    noResultsMessage.textContent = searchKeyword ? '没有找到匹配的历史记录' : '暂无历史记录';
+                    historyContainer.appendChild(noResultsMessage);
+                    return;
+                }
+                
+                // 添加历史记录项
+                filteredHistory.forEach((item, index) => {
+                    // 找到原始索引
+                    const originalIndex = history.indexOf(item);
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'card bg-gray-50 p-4 cursor-pointer hover:bg-gray-100 transition-colors';
+                    
+                    // 格式化日期
+                    const date = new Date(item.timestamp);
+                    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                    
+                    // 设置历史记录项内容
+                    historyItem.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="font-medium text-primary">
+                                ${item.input.licensePlate || '未填写车牌号'}
+                            </div>
+                            <div class="text-xs text-light-400">
+                                ${formattedDate}
+                            </div>
+                        </div>
+                        <div class="text-sm text-light-300">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>集装箱: ${item.input.containerNumber || '未填写'}</div>
+                                <div>件数: ${item.input.packageCount}</div>
+                                <div>入区重车: ${item.input.entryWeight} kg</div>
+                                <div>出区空车: ${item.input.exitWeight} kg</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-light-400 flex justify-end">
+                            <span class="history-load cursor-pointer hover:text-primary transition-colors" data-index="${index}">
+                                <i class="fa fa-refresh"></i> 加载此记录
+                            </span>
+                        </div>
+                    `;
+                    
+                    // 添加点击事件
+                    const loadButton = historyItem.querySelector('.history-load');
+                    loadButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        loadHistoryItem(originalIndex);
+                    });
+                    
+                    historyContainer.appendChild(historyItem);
+                });
+            }
+            
+            // 加载历史记录项
+            function loadHistoryItem(index) {
+                if (index >= 0 && index < history.length) {
+                    const item = history[index];
+                    
+                    // 填充输入字段
+                    inputs.licensePlate.value = item.input.licensePlate || '';
+                    inputs.vehicleWeight.value = item.input.vehicleWeight || '';
+                    inputs.packageCount.value = item.input.packageCount || '';
+                    inputs.packageWeight.value = item.input.packageWeight || '';
+                    inputs.containerNumber.value = item.input.containerNumber || '';
+                    inputs.containerWeight.value = item.input.containerWeight || '';
+                    inputs.entryWeight.value = item.input.entryWeight || '';
+                    inputs.exitWeight.value = item.input.exitWeight || '';
+                    
+                    // 更新结果
+                    results = item.results;
+                    displayResults();
+                    
+                    // 显示通知
+                    showNotification('已加载', '历史记录已加载到当前表单', 'success');
+                }
+            }
+            
+            // 从本地存储加载历史记录
+            function loadHistoryFromLocalStorage() {
+                try {
+                    const savedHistory = localStorage.getItem('calculatorHistory');
+                    
+                    if (savedHistory) {
+                        history = JSON.parse(savedHistory);
+                    }
+                } catch (error) {
+                    console.error('从本地存储加载历史记录失败:', error);
+                    history = [];
+                }
+                // 获取搜索框引用
+                const historySearch = document.getElementById('historySearch');
+                updateHistoryDisplay(historySearch.value.trim());
+            }
+            
+            // 更新本地存储中的历史记录
+            function updateHistoryInLocalStorage() {
+                try {
+                    localStorage.setItem('calculatorHistory', JSON.stringify(history));
+                } catch (error) {
+                    console.error('更新本地存储中的历史记录失败:', error);
+                }
+            }
+            
+            // 清空历史记录
+            function clearHistory() {
+                if (history.length === 0) {
+                    showNotification('提示', '没有历史记录可清空', 'info');
+                    return;
+                }
+                
+                if (confirm('确定要清空所有历史记录吗？此操作不可撤销。')) {
+                    history = [];
+                    // 获取搜索框引用
+                    const historySearch = document.getElementById('historySearch');
+                    updateHistoryDisplay(historySearch.value.trim());
+                    updateHistoryInLocalStorage();
+                    showNotification('已清空', '所有历史记录已删除', 'success');
+                }
+            }
+            
+            // 添加事件监听器
+            calculateBtn.addEventListener('click', calculate);
+            resetBtn.addEventListener('click', resetForm);
+            saveBtn.addEventListener('click', function() {
+                if (saveToLocalStorage()) {
+                    showNotification('已保存', '当前数据已保存到本地', 'success');
+                }
+            });
+            clearHistoryBtn.addEventListener('click', clearHistory);
+            closeNotification.addEventListener('click', hideNotification);
+            
+            // 历史记录搜索功能
+            const historySearch = document.getElementById('historySearch');
+            historySearch.addEventListener('input', function() {
+                updateHistoryDisplay(this.value.trim());
+            });
+            
+            // 为输入字段添加事件监听器
+            Object.values(inputs).forEach(input => {
+                input.addEventListener('input', function() {
+                    this.classList.remove('border-error');
+                    
+                    // 非必填字段（车牌号、集装箱号）不触发实时计算
+                    if (this.id !== 'licensePlate' && this.id !== 'containerNumber') {
+                        // 使用setTimeout延迟执行，避免频繁触发
+                        clearTimeout(window.calculateTimeout);
+                        window.calculateTimeout = setTimeout(realTimeCalculate, 500);
+                    }
+                    
+                    // 车辆备案重量、集装箱备案重量或入区重车重量变化时，立即更新入区货重
+                    if (['vehicleWeight', 'containerWeight', 'entryWeight'].includes(this.id)) {
+                        calculateEntryCargoWeight();
+                    }
+                });
+                
+                // 为必填数字字段添加失去焦点事件
+                if (['vehicleWeight', 'packageCount', 'packageWeight', 'containerWeight', 'entryWeight', 'exitWeight'].includes(input.id)) {
+                    input.addEventListener('blur', function() {
+                        // 如果字段有值且有效，则触发实时计算检查
+                        if (this.value && this.value.trim() !== '') {
+                            realTimeCalculate();
+                        }
+                    });
+                }
+            });
+            
+            // 从本地存储加载数据
+            loadFromLocalStorage();
+            
+            // 初始化时计算一次入区货重
+            calculateEntryCargoWeight();
+            
+            // 初始化鼠标跟随效果
+            initMouseFollowEffect();
+            
+            // 初始化滚动渐入效果
+            initScrollReveal();
+            
+            // 初始化打字效果
+            initTypingEffect(['酉润关务', '吴奕莹专用', '13408970174']);
+        });
+        
+        // 打字效果
+        function initTypingEffect(words = ['酉润关务', '吴奕莹专用', '13408970174']) {
+            const typingText = document.getElementById('typing-text');
+            let wordIndex = 0;
+            let charIndex = 0;
+            let isDeleting = false;
+            const typingSpeed = 100;
+            const pauseTime = 1500;
+            
+            function type() {
+                const currentWord = words[wordIndex];
+                
+                if (isDeleting) {
+                    // 删除字符
+                    typingText.textContent = currentWord.substring(0, charIndex - 1);
+                    charIndex--;
+                } else {
+                    // 添加字符
+                    typingText.textContent = currentWord.substring(0, charIndex + 1);
+                    charIndex++;
+                }
+                
+                // 处理删除/添加状态转换
+                if (!isDeleting && charIndex === currentWord.length) {
+                    isDeleting = true;
+                    setTimeout(type, pauseTime); // 完成单词后暂停
+                } else if (isDeleting && charIndex === 0) {
+                    isDeleting = false;
+                    wordIndex = (wordIndex + 1) % words.length; // 循环切换单词
+                    setTimeout(type, 500); // 短暂暂停后开始新单词
+                } else {
+                    // 继续当前操作
+                    setTimeout(type, isDeleting ? typingSpeed/2 : typingSpeed);
+                }
+            }
+            
+            // 启动动画
+            type();
+        }
+        
+        // 鼠标跟随效果
+        function initMouseFollowEffect() {
+            const container = document.getElementById('mouse-follow-container');
+            let lastX = 0, lastY = 0;
+            const minDistance = 100; // 最小触发距离
+            const maxElements = 5; // 最大同时显示元素数量
+            
+            document.addEventListener('mousemove', (e) => {
+                const currentX = e.clientX;
+                const currentY = e.clientY;
+                
+                // 计算与上次位置的距离
+                const distance = Math.sqrt(
+                    Math.pow(currentX - lastX, 2) + Math.pow(currentY - lastY, 2)
+                );
+                
+                // 如果移动距离足够大，创建新元素
+                if (distance > minDistance) {
+                    createFollowElement(currentX, currentY);
+                    lastX = currentX;
+                    lastY = currentY;
+                }
+            });
+            
+            function createFollowElement(x, y) {
+                // 创建圆形元素
+                const circle = document.createElement('div');
+                circle.className = 'mouse-follow-element rounded-full bg-primary';
+                
+                // 随机大小
+                const size = Math.floor(Math.random() * 20) + 10;
+                circle.style.width = `${size}px`;
+                circle.style.height = `${size}px`;
+                
+                // 定位
+                circle.style.left = `${x - size/2}px`;
+                circle.style.top = `${y - size/2}px`;
+                
+                // 添加到容器
+                container.appendChild(circle);
+                
+                // 强制重排后添加动画类
+                setTimeout(() => {
+                    circle.style.opacity = '0.3';
+                    circle.style.transform = 'scale(2)';
+                    
+                    // 淡出
+                    setTimeout(() => {
+                        circle.style.opacity = '0';
+                        circle.style.transform = 'scale(3)';
+                        
+                        // 动画完成后移除元素
+                        setTimeout(() => {
+                            if (container.contains(circle)) {
+                                container.removeChild(circle);
+                            }
+                        }, 500);
+                    }, 500);
+                }, 10);
+                
+                // 限制元素数量
+                if (container.children.length > maxElements) {
+                    container.removeChild(container.firstChild);
+                }
+            }
+        }
+        
+        // 滚动渐入效果
+        function initScrollReveal() {
+            const revealElements = document.querySelectorAll('.card');
+            
+            const revealOnScroll = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const element = entry.target;
+                        
+                        // 添加动画类
+                        element.classList.add('animate-fade-in');
+                        
+                        // 只触发一次
+                        revealOnScroll.unobserve(element);
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -100px 0px'
+            });
+            
+            revealElements.forEach(element => {
+                revealOnScroll.observe(element);
+                element.style.opacity = '0';
+            });
+        }
+    </script>
+
+    <!-- PWA Service Worker 注册 -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

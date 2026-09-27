@@ -1,0 +1,44 @@
+# 酉润关务计算器 - PWA 转 Android APK (轻量方案)
+# 使用 pwabuilder 将 PWA 直接打包为 APK，无需 Android SDK
+
+name: Build APK with Pwabuilder
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pwabuilder
+        run: npm install -g pwabuilder
+
+      - name: Build APK
+        run: |
+          mkdir -p output
+          # 使用 pwabuilder 的命令行模式构建 APK
+          # 注意：此方案需要在 GitHub Pages 部署后才能使用（需要 HTTPS URL）
+          echo "请先部署到 GitHub Pages，然后使用以下命令本地构建："
+          echo "pwabuilder https://你的用户名.github.io/仓库名/ --platform android"
+          echo "或者使用 Capacitor 方案（见 build-apk.yml）"
+
+      - name: Upload source files
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-files
+          path: |
+            index.html
+            manifest.json
+            sw.js
+            README.md
+          retention-days: 7

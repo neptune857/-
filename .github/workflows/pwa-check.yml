@@ -1,0 +1,60 @@
+# 酉润关务计算器 - PWA 构建与验证
+# 验证 PWA 配置文件完整性
+
+name: PWA Build Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  pwa-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate manifest.json
+        run: |
+          echo "检查 manifest.json 格式..."
+          node -e "
+            const fs = require('fs');
+            const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+            console.log('manifest.json 验证通过:');
+            console.log('  name:', manifest.name);
+            console.log('  start_url:', manifest.start_url);
+            console.log('  display:', manifest.display);
+            console.log('  icons:', manifest.icons.length, '个');
+          "
+
+      - name: Validate HTML references
+        run: |
+          echo "检查 HTML 中的 PWA 引用..."
+          grep -q 'manifest.json' index.html && echo "✓ manifest.json 已引用" || echo "✗ manifest.json 未引用"
+          grep -q 'serviceWorker' index.html && echo "✓ Service Worker 已注册" || echo "✗ Service Worker 未注册"
+          grep -q 'sw.js' index.html && echo "✓ sw.js 引用存在" || echo "✗ sw.js 引用缺失"
+
+      - name: Check required files
+        run: |
+          echo "检查必需文件..."
+          for file in index.html manifest.json sw.js; do
+            if [ -f "$file" ]; then
+              echo "✓ $file 存在"
+            else
+              echo "✗ $file 缺失"
+              exit 1
+            fi
+          done
+
+      - name: Upload static files
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
