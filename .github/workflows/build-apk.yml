@@ -20,7 +20,6 @@ jobs:
         with:
           node-version: '20'
     
-
       - name: Install Capacitor and Android Platform
         run: |
           npm install -g @capacitor/cli @capacitor/core
@@ -28,7 +27,7 @@ jobs:
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Initialize Capacitor Project
-        run: npx cap init "酉润关务计算器" com.yourun.calculator --web-dir=.
+        run: npx cap init "酉润关务计算器" com.yourun.calculator --webDir=./
 
       - name: Add Android Platform
         run: npx cap add android
