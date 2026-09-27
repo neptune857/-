@@ -19,29 +19,40 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+          cache: 'npm'
 
-      - name: Install Capacitor
+      - name: Install Capacitor and Android Platform
         run: |
-          npm install -g @capacitor/cli@6 @capacitor/core@6
+          npm install -g @capacitor/cli @capacitor/core
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Initialize Capacitor Project
-        run: |
-          npm init -y
-          npx cap init "酉润关务计算器" "com.yourun.calculator" --web-dir=.
+        run: npx cap init "酉润关务计算器" com.yourun.calculator --web-dir=.
 
       - name: Add Android Platform
+        run: npx cap add android
+
+      - name: Fix AndroidManifest for ES Modules
         run: |
-          npx cap add android
+          sed -i 's|<application|<application android:usesCleartextTraffic="true"|' android/app/src/main/AndroidManifest.xml
+          sed -i 's|</application>||' android/app/src/main/AndroidManifest.xml
+          echo '<uses-permission android:name="android.permission.INTERNET" />' >> android/app/src/main/AndroidManifest.xml
+          echo '<application android:usesCleartextTraffic="true" android:networkSecurityConfig="@xml/network_security_config">' >> android/app/src/main/AndroidManifest.xml
+          sed -i 's|</activity>|</activity>\n<intent-filter>\n<action android:name="android.intent.action.VIEW" />\n<category android:name="android.intent.category.DEFAULT" />\n<category android:name="android.intent.category.BROWSABLE" />\n</intent-filter>|' android/app/src/main/AndroidManifest.xml
+
+      - name: Add Network Security Config
+        run: |
+          mkdir -p android/app/src/main/res/xml
+          echo '<network-security-config><base-config cleartextTrafficPermitted="true"><trust-anchors><certificates src="system" /></trust-anchors></base-config></network-security-config>' > android/app/src/main/res/xml/network_security_config.xml
 
       - name: Sync Web Assets
-        run: |
-          npx cap copy
-          npx cap sync
+        run: npx cap sync android
 
-      - name: Build APK
+      - name: Build Android App
         run: |
           cd android
+          ./gradlew clean
           ./gradlew assembleDebug
         timeout-minutes: 15
 
